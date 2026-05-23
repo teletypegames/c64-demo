@@ -1,9 +1,9 @@
 ; -----------------------------------------------------------
-; hello.asm - C64 demo: szoveg kiiratas + keret villogtatas
-; Forditas: acme -f cbm -o hello.prg hello.asm
+; main.asm - C64 demo: szoveg kiiratas + keret villogtatas
+; Forditas: acme -f cbm -o main.prg main.asm
 ; -----------------------------------------------------------
 
-!to "hello.prg", cbm
+!to "main.prg", cbm
 
 * = $0801
 
@@ -56,7 +56,7 @@ delay_inner:
     jmp color_loop
 
 message:
-    !text "HELLO, COMMODORE 64!"
+    !text "main, COMMODORE 64!"
     !byte 13, 13
-    !text "UDV TASI - JO PROGRAMOZAST!"
+    !text "TELETYPE GAMES DEMO"
     !byte 13, 0
