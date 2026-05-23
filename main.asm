@@ -56,7 +56,7 @@ delay_inner:
     jmp color_loop
 
 message:
-    !text "main, COMMODORE 64!"
+    !text "HELLO, COMMODORE 64!"
     !byte 13, 13
     !text "TELETYPE GAMES DEMO"
     !byte 13, 0
