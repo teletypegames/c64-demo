@@ -1,6 +1,7 @@
 ASM    = acme
 EMU    = x64sc
 SRC    = main.asm
+SRCS   = $(wildcard *.asm)
 TARGET = main.prg
 
 UNAME_S := $(shell uname -s)
@@ -19,7 +20,7 @@ endif
 
 build: $(TARGET)
 
-$(TARGET): $(SRC)
+$(TARGET): $(SRCS)
 	$(ASM) -f cbm -o $(TARGET) $(SRC)
 
 run: build
