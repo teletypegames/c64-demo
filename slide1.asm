@@ -1,7 +1,7 @@
 ; -----------------------------------------------------------
 ; slide1.asm - giant TTG logo + credits scroller
 ;   effects: gold wash on the logo, smooth pixel scroll,
-;   pulsing title
+;   pulsing title, raster color gradient behind the scroller
 ; -----------------------------------------------------------
 
 s1_init:
@@ -12,9 +12,9 @@ s1_init:
     +prtext 17,  9, LGREEN, txt_www,   txt_www_end - txt_www
     +prtext 19, 14, LGREY,  txt_city,  txt_city_end - txt_city
 
-    ; scroller row color
+    ; scroller row color: white, so it reads on the blue gradient
     ldx #39
-    lda #CYAN
+    lda #WHITE
 scrollcol_loop:
     sta COLRAM+SCROLLROW*40,x
     dex
@@ -36,12 +36,30 @@ wait_scrtop:
     lda xscroll          ; bits 0-2 = x scroll, bit 3 = 0 -> 38 columns
     sta XCTRL
 
+    ; blue raster gradient behind the scroller: one background
+    ; color per line, chasing the beam through lines 161-170
+    ldx #0
+s1_grad:
+    txa
+    clc
+    adc #RAS_SCRTOP+1
+s1_gwait:
+    cmp RASTER
+    bne s1_gwait
+    lda gradtbl,x
+    sta BG
+    inx
+    cpx #10
+    bne s1_grad
+
 wait_scrbot:
     lda RASTER
     cmp #RAS_SCRBOT
     bne wait_scrbot
     lda #$c8             ; back to default: 40 columns, no scroll
     sta XCTRL
+    lda #BLACK           ; gradient off below the scroller row
+    sta BG
 
     ; beam is in the lower border: do all updates now, invisibly
 wait_bottom:
@@ -212,6 +230,9 @@ bigfont:
 
 letter_off:              ; column offset of each letter (8 wide + 2 gap)
     !byte 0, 10, 20
+
+gradtbl:                 ; scroller backdrop: blue ramp, cyan peak
+    !byte $06, $06, $0e, $0e, $03, $03, $0e, $0e, $06, $06
 
 ; texts in screen codes (!scr); lowercase source shows as uppercase on C64
 txt_title:

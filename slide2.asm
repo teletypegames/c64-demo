@@ -1,6 +1,8 @@
 ; -----------------------------------------------------------
 ; slide2.asm - OUR FIRST GAME: Definitely not an Impostor
-;   big block letters with the gold wash running across them
+;   big block letters with the gold wash running across them;
+;   each text block gets a shifted wash phase, so the glow
+;   rolls through the three lines diagonally
 ; -----------------------------------------------------------
 
 s2_init:
@@ -24,7 +26,8 @@ s2_update:
     inc washphase
 s2_hold:
 
-    ; gold wash across all 15 big-letter rows (4-8, 10-14, 16-20)
+    ; gold wash across all 15 big-letter rows (4-8, 10-14, 16-20);
+    ; each block is 5 wash steps behind the one above -> diagonal
     ldx #39
 s2_loop:
     txa
@@ -38,11 +41,23 @@ s2_loop:
     sta COLRAM +  6*40,x
     sta COLRAM +  7*40,x
     sta COLRAM +  8*40,x
+    tya
+    clc
+    adc #5
+    and #15
+    tay
+    lda washtbl,y
     sta COLRAM + 10*40,x
     sta COLRAM + 11*40,x
     sta COLRAM + 12*40,x
     sta COLRAM + 13*40,x
     sta COLRAM + 14*40,x
+    tya
+    clc
+    adc #5
+    and #15
+    tay
+    lda washtbl,y
     sta COLRAM + 16*40,x
     sta COLRAM + 17*40,x
     sta COLRAM + 18*40,x

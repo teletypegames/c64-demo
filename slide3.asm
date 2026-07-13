@@ -1,7 +1,8 @@
 ; -----------------------------------------------------------
 ; slide3.asm - OUR SECOND GAME: IS COMING
-;   raster bars running on the border only, drop-shadowed
-;   big letters in the middle
+;   raster bars on the border that also bleed into the empty
+;   top and bottom of the screen; the middle stays black, so
+;   the drop-shadowed big letters remain readable
 ; -----------------------------------------------------------
 
 s3_init:
@@ -25,6 +26,8 @@ s3_hold:
 
     ; chase the beam: every 4th raster line from RAS_BARTOP down,
     ; set the BORDER color from the cyclic 64-entry bar table;
+    ; above line 74 and from line 210 the screen rows are empty,
+    ; there the bars run on the background too - in the middle
     ; the background stays black so the text remains readable
     lda #RAS_BARTOP
     sta s3line
@@ -40,7 +43,19 @@ s3_wait:
     and #63
     tay
     lda rastbl,y
+    ldy s3line
+    cpy #74              ; top zone: bar color on the background too
+    bcc s3_bg
+    cpy #210             ; bottom zone likewise
+    bcs s3_bg
+    sta BORDER           ; middle: border only, background back to
+    lda #BLACK           ;   black (the top zone left its last color)
+    sta BG
+    jmp s3_step
+s3_bg:
+    sta BG
     sta BORDER
+s3_step:
     lda s3line
     clc
     adc #4
@@ -51,6 +66,7 @@ s3_wait:
 
     lda #BLACK           ; below the bar area: back to black
     sta BORDER
+    sta BG
 
 s3_wbot:                 ; keep the one-call-per-frame contract
     lda RASTER

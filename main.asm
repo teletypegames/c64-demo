@@ -4,14 +4,16 @@
 ;   slide 2: OUR FIRST GAME - Definitely not an Impostor
 ;   slide 3: OUR SECOND GAME IS COMING (border raster bars)
 ;   slide 4: CONTACT
-;   slide 5: the assembly confession
-;   slides cross-fade through black between switches
+;   slide 5: the assembly confession (typewriter)
+;   slides transition through black between switches
+;   (fade / random dissolve / column wipe, per slide)
 ;   all timed by polling the raster beam
 ;
 ; Files:
-;   defs.asm    - constants, zero page, macros
-;   common.asm  - shared routines, tables, variables
-;   slideN.asm  - one file per slide: sN_init, sN_update + data
+;   defs.asm        - constants, zero page, macros
+;   transitions.asm - slide transitions: fade, dissolve, wipe
+;   common.asm      - shared routines, tables, variables
+;   slideN.asm      - one file per slide: sN_init, sN_update + data
 ;
 ; Build: acme -f cbm -o main.prg main.asm
 ; -----------------------------------------------------------
@@ -90,7 +92,7 @@ dur_dec:
     bne main
 
 advance:
-    jsr fade_out         ; fade the old slide to black
+    jsr trans_out        ; hide the old slide (its out-transition)
 adv_release:
     jsr scan_space       ; a held space must not race through
     beq adv_release      ;   the whole show
@@ -106,7 +108,7 @@ slide_ok:
     jmp main
 
 go_back:
-    jsr fade_out
+    jsr trans_out
 back_release:
     jsr scan_del
     beq back_release
@@ -176,170 +178,13 @@ slide_setup:
     lda #BLACK
     sta BORDER
     sta BG
+    sta SPR_EN           ; a slide that wants sprites enables them itself
     jmp (vec)            ; init ends with rts -> returns to slide_setup's caller
 
 ; ============================================================
-; slide transition: fade through black
+; transitions, shared routines and the slides
 ; ============================================================
-
-; ---- draw the current slide while the display is switched off
-; (everything shows border color = black), snapshot its colors,
-; blacken them, switch the display back on and fade in ----
-show_slide:
-    lda #$0b             ; display off
-    sta SCRCTRL
-    jsr slide_setup
-    jsr snapshot_colram
-    lda #$1b             ; display on
-    sta SCRCTRL
-
-    ; fade in: fadecnt counts how many times the target color is
-    ; darkened; counting 4 -> 0 walks each cell from black back
-    ; up to its snapshot color
-    lda #FADE_STEPS-1
-    sta fadecnt
-fi_step:
-    jsr build_map
-    jsr apply_map
-    ldx #FADE_SPEED
-fi_wait:
-    jsr wait_frame
-    dex
-    bne fi_wait
-    lda fadecnt
-    beq fi_done
-    dec fadecnt
-    jmp fi_step
-fi_done:
-    rts
-
-; ---- darken the whole color RAM step by step until black ----
-fade_out:
-    lda #FADE_STEPS
-    sta fadecnt
-fo_step:
-    ldx #FADE_SPEED
-fo_wait:
-    jsr wait_frame
-    dex
-    bne fo_wait
-    jsr apply_fade
-    dec fadecnt
-    bne fo_step
-    rts
-
-; ---- wait for the next bottom-border arrival of the beam ----
-wait_frame:
-wf_leave:
-    lda RASTER           ; first leave line RAS_BOTTOM if we are on it
-    cmp #RAS_BOTTOM
-    beq wf_leave
-wf_reach:
-    lda RASTER
-    cmp #RAS_BOTTOM
-    bne wf_reach
-    rts
-
-; ---- one fade-out step: every color RAM cell one shade darker ----
-apply_fade:
-    ldx #0
-af_loop:
-    lda COLRAM,x
-    and #15              ; color RAM reads have garbage upper bits
-    tay
-    lda fadetbl,y
-    sta COLRAM,x
-    lda COLRAM+250,x
-    and #15
-    tay
-    lda fadetbl,y
-    sta COLRAM+250,x
-    lda COLRAM+500,x
-    and #15
-    tay
-    lda fadetbl,y
-    sta COLRAM+500,x
-    lda COLRAM+750,x
-    and #15
-    tay
-    lda fadetbl,y
-    sta COLRAM+750,x
-    inx
-    cpx #250
-    bne af_loop
-    rts
-
-; ---- copy color RAM to FADEBUF, then blacken color RAM ----
-snapshot_colram:
-    ldx #0
-sn_loop:
-    lda COLRAM,x
-    and #15
-    sta FADEBUF,x
-    lda COLRAM+250,x
-    and #15
-    sta FADEBUF+250,x
-    lda COLRAM+500,x
-    and #15
-    sta FADEBUF+500,x
-    lda COLRAM+750,x
-    and #15
-    sta FADEBUF+750,x
-    lda #BLACK
-    sta COLRAM,x
-    sta COLRAM+250,x
-    sta COLRAM+500,x
-    sta COLRAM+750,x
-    inx
-    cpx #250
-    bne sn_loop
-    rts
-
-; ---- curmap[c] = color c darkened fadecnt times ----
-build_map:
-    ldx #15
-bm_color:
-    txa
-    tay
-    lda fadecnt
-    sta bmcnt
-    beq bm_store         ; 0 steps: identity map
-bm_apply:
-    lda fadetbl,y
-    tay
-    dec bmcnt
-    bne bm_apply
-bm_store:
-    tya
-    sta curmap,x
-    dex
-    bpl bm_color
-    rts
-
-; ---- write curmap[FADEBUF] into the whole color RAM ----
-apply_map:
-    ldx #0
-am_loop:
-    ldy FADEBUF,x
-    lda curmap,y
-    sta COLRAM,x
-    ldy FADEBUF+250,x
-    lda curmap,y
-    sta COLRAM+250,x
-    ldy FADEBUF+500,x
-    lda curmap,y
-    sta COLRAM+500,x
-    ldy FADEBUF+750,x
-    lda curmap,y
-    sta COLRAM+750,x
-    inx
-    cpx #250
-    bne am_loop
-    rts
-
-; ============================================================
-; shared routines and the slides
-; ============================================================
+!src "transitions.asm"
 !src "common.asm"
 !src "slide1.asm"
 !src "slide2.asm"
@@ -357,16 +202,19 @@ slide_upd_lo:
 slide_upd_hi:
     !byte >s1_update, >s2_update, >s3_update, >s4_update, >s5_update
 slide_dur_lo:
-    !byte <SLIDE_TIME, <SLIDE_TIME, <SLIDE_TIME, <SLIDE_TIME, <SLIDE_TIME
+    !byte <SLIDE_TIME, <SLIDE_TIME, <SLIDE_TIME, <SLIDE_TIME, <S5_TIME
 slide_dur_hi:
-    !byte >SLIDE_TIME, >SLIDE_TIME, >SLIDE_TIME, >SLIDE_TIME, >SLIDE_TIME
+    !byte >SLIDE_TIME, >SLIDE_TIME, >SLIDE_TIME, >SLIDE_TIME, >S5_TIME
+
+; ---- per-slide transitions: reveal type / hide type ----
+tin_tbl:
+    !byte TR_FADE, TR_WIPE, TR_DISSOLVE, TR_FADE, TR_DISSOLVE
+tout_tbl:
+    !byte TR_DISSOLVE, TR_FADE, TR_WIPE, TR_DISSOLVE, TR_WIPE
 
 ; ---- variables ----
 slide:     !byte 0       ; current slide index
 durlo:     !byte 0       ; frames left on this slide (16 bit)
 durhi:     !byte 0
-fadecnt:   !byte 0       ; fade step counter
-bmcnt:     !byte 0       ; build_map inner counter
-curmap:    !fill 16, 0   ; current fade-in color map
 paused:    !byte 0       ; 1 = slide countdown frozen
 pheld:     !byte 0       ; 'p' key edge detection state
