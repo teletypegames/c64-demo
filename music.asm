@@ -18,8 +18,8 @@
 ;              echo data lives on the same 128-row grid as the
 ;              bass, so the two voices can never drift apart.
 ;   Original timing: tempo 150, speed 5 = 12 rows/s at 60 Hz.
-;   On PAL (50 Hz) that is 25 frames per 6 rows, so every
-;   sixth row lasts 5 frames instead of 4 (see spd_tbl).
+;   On PAL (50 Hz) we run 4 frames/row = 12.5 rows/s, a touch
+;   faster than the original on purpose (see spd_tbl).
 ; -----------------------------------------------------------
 
 ; ---- SID registers ----
@@ -103,7 +103,23 @@ mi_clr:
     rts
 
 ; ---- play one tick: called once per frame ----
+; Preserves A/X/Y: the transition loops keep counters in the
+; registers across their wait_frame calls.
 music_play:
+    pha
+    txa
+    pha
+    tya
+    pha
+    jsr mp_core
+    pla
+    tay
+    pla
+    tax
+    pla
+    rts
+
+mp_core:
     lda mus_muted
     bne mp_done                 ; muted: song position frozen too
     lda mus_bcut                ; scheduled bass gate-off: opens a small
@@ -224,7 +240,9 @@ mus_spd_ix:    !byte 0          ; index into spd_tbl
 mus_bcut:      !byte 0          ; frames until the pre-note bass gate-off
                                 ;   (0 = none scheduled)
 
-spd_tbl:       !byte 4,4,4,4,4,5    ; 25 frames / 6 rows = 12 rows/s
+spd_tbl:       !byte 4,4,4,4,4,4    ; 4 frames/row = 12.5 rows/s, a hair
+                                    ;   faster than the original 12
+                                    ;   (4,4,4,4,4,5 would be exact)
 
 ; ---- note tables (PAL SID: reg = Hz * 16777216 / 985248) ----
 ; bass: 0 = C-2, 1 = A#1, 2 = D#2, 3 = F-2
