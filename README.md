@@ -10,7 +10,7 @@ A Commodore 64 slide show written in 6502 assembly (built with the ACME assemble
 4. **Contact** — pulsing big *CONTACT* title, web / BBS / IRC lines, a 12-cell three-layer parallax starfield, and six hardware sprites (four-pointed stars) floating on sine-wave paths behind the text.
 5. **The assembly confession** — a justified-text apology explaining that this slide show was written with a little help from an AI. The body types in live (one character per frame with a white block cursor); a closing line appears and pulses when the typing is done.
 
-Each slide is shown for 6 seconds (`SLIDE_TIME` in `defs.asm`, PAL frames); slide 5 gets 9 seconds (`S5_TIME`) to let the typewriter finish.
+Each slide is shown for 8 seconds (`SLIDE_TIME` in `defs.asm`, PAL frames); slide 5 gets 9 seconds (`S5_TIME`) to let the typewriter finish.
 
 ## Controls
 
@@ -47,7 +47,7 @@ RUN
 | `defs.asm` | hardware registers (VIC-II, CIA, sprites), colors, layout/timing constants, zero page assignments, the `+prtext` / `+prbig` macros |
 | `transitions.asm` | slide transition engine: show/hide dispatch, three transition types (fade, dissolve, wipe), `wait_frame` raster sync, color snapshot/restore |
 | `common.asm` | shared routines (`clear_screen`, `print_text`, `draw_big`), shared tables (row×40 lookup, 3×5 block font, wash/pulse/fade color ramps), shared variables |
-| `music.asm` | SID music driver skeleton: `music_init` (clear SID, set volume), `music_play` (called every frame from `wait_frame`), mute/unmute; ready for a real SID player routine |
+| `music.asm` | SID music driver: three-voice pattern player (bass, drums, echo lead) with the note/pattern tables of the *Impostor* tune, `music_init` (SID setup + song restart), `music_play` (ticked once per frame), mute/unmute |
 | `slide1.asm` … `slide5.asm` | one file per slide: `sN_init` (draws the screen), `sN_update` (runs once per frame), plus slide-local data and variables |
 
 Everything is assembled in a single ACME pass, so labels can be referenced freely across files.
@@ -82,7 +82,15 @@ Slide 4 uses all six visible hardware sprites (24×21 four-pointed star shape). 
 
 ### Music
 
-`music.asm` provides a SID driver skeleton. `music_init` clears all SID registers and sets master volume; `music_play` is called once per frame from `wait_frame`, so music keeps playing through transitions. The `M` key toggles mute by zeroing/restoring the SID volume register. To add music, replace the body of `music_play` with a real SID player routine (e.g. a GoatTracker or SID Wizard export).
+`music.asm` is a three-voice SID pattern player. The tune is track 0 ("room work") of the *Impostor* TIC-80 cart, converted by hand into a 128-row pattern grid:
+
+- **Voice 1 — bass**: 50% pulse wave (the original is a soft sine, but pulse carries better on the SID). The player peeks at the next row and gates the bass off 2 frames before each new note, so notes don't run into each other.
+- **Voice 2 — drums**: noise waveform with a short decay; a low pitch plays the kick, a high pitch the snare.
+- **Voice 3 — echo canon**: repeats the bass melody 2 rows (~170 ms) later, 3 octaves up, with a decaying triangle pluck; repeated notes bounce up one more octave. The echo lives on the same 128-row grid as the bass, so the two voices can never drift apart.
+
+Rows are one byte per voice: `$00` = nothing, `$01` = key off, `$80|n` = play note *n*. Each row lasts 4 frames (12.5 rows/s on PAL, a touch faster than the original's 12 on purpose).
+
+`music_play` is ticked once per frame from two places: the main loop (after the slide update, which ends at `RAS_BOTTOM`) and `wait_frame` (so music keeps playing through transitions). It preserves A/X/Y because the transition loops keep counters in the registers. The `M` key toggles mute by zeroing/restoring the SID volume register; while muted the song position is frozen too.
 
 ## Memory map
 
