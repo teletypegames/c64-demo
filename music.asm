@@ -7,7 +7,8 @@
 ;
 ;   The tune is track 0 ("room work") of the Impostor TIC-80
 ;   cart, converted from inc/meta/meta.assets.lua:
-;     voice 1: bass line (sfx 59, soft sine -> SID triangle)
+;     voice 1: bass line (sfx 59 -> SID 50% pulse; the original
+;              is a soft sine, but pulse carries better here)
 ;     voice 2: drums (sfx 61, TIC-80 noise -> SID noise,
 ;              C-1 = kick, C-4 = snare)
 ;   Original timing: tempo 150, speed 5 = 12 rows/s at 60 Hz.
@@ -48,8 +49,8 @@ SID_FCTL  = SID_BASE+23         ; filter resonance + voice routing
 SID_VOL   = SID_BASE+24         ; filter mode (hi nibble) + master volume (lo nibble)
 
 ; ---- waveform control values ----
-BASS_ON   = $11                 ; triangle + gate
-BASS_OFF  = $10
+BASS_ON   = $41                 ; pulse + gate (much louder than triangle,
+BASS_OFF  = $40                 ;   so the bass stands out from the drums)
 DRUM_ON   = $81                 ; noise + gate
 DRUM_OFF  = $80
 
@@ -68,7 +69,11 @@ mi_clr:
     sta SID_V1_AD
     lda #$f4
     sta SID_V1_SR
-    lda #$05                    ; drums: instant attack, ~170 ms decay
+    lda #$08                    ; bass pulse width: 50% square, the
+    sta SID_V1_PH               ;   fattest setting ($0800 of $0fff)
+    lda #$00
+    sta SID_V1_PL
+    lda #$04                    ; drums: instant attack, ~110 ms decay
     sta SID_V2_AD
     lda #$00
     sta SID_V2_SR
