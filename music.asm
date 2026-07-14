@@ -67,8 +67,8 @@ mi_clr:
 
     lda #$00                    ; bass: instant attack, full sustain
     sta SID_V1_AD
-    lda #$f4
-    sta SID_V1_SR
+    lda #$f3                    ; short release, so the tail does not
+    sta SID_V1_SR               ;   fill the rests between the notes
     lda #$08                    ; bass pulse width: 50% square, the
     sta SID_V1_PH               ;   fattest setting ($0800 of $0fff)
     lda #$00
@@ -85,6 +85,7 @@ mi_clr:
     sta mus_muted
     sta mus_row
     sta mus_spd_ix
+    sta mus_bcut
     lda #1                      ; first music_play tick starts row 0
     sta mus_tick
     rts
@@ -93,6 +94,13 @@ mi_clr:
 music_play:
     lda mus_muted
     bne mp_done                 ; muted: song position frozen too
+    lda mus_bcut                ; scheduled bass gate-off: opens a small
+    beq mp_tick                 ;   gap before the next note, so the
+    dec mus_bcut                ;   notes don't run into each other
+    bne mp_tick
+    lda #BASS_OFF
+    sta SID_V1_CR
+mp_tick:
     dec mus_tick
     beq mp_row
 mp_done:
@@ -160,6 +168,13 @@ mp_next:
     stx mus_spd_ix              ; restart the 4,4,4,4,4,5 cycle with it
 mp_store:
     stx mus_row
+    lda bass_pat,x              ; peek at the next row: if a note comes,
+    bpl mp_nocut                ;   cut the bass 2 frames before it
+    lda mus_tick
+    sec
+    sbc #2
+    sta mus_bcut
+mp_nocut:
     rts
 
 ; ---- mute: silence SID ----
@@ -179,6 +194,8 @@ mus_muted:     !byte 0          ; 1 = muted
 mus_row:       !byte 0          ; song position (0..SONG_LEN-1)
 mus_tick:      !byte 1          ; frames left of the current row
 mus_spd_ix:    !byte 0          ; index into spd_tbl
+mus_bcut:      !byte 0          ; frames until the pre-note bass gate-off
+                                ;   (0 = none scheduled)
 
 spd_tbl:       !byte 4,4,4,4,4,5    ; 25 frames / 6 rows = 12 rows/s
 
