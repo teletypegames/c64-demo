@@ -38,6 +38,8 @@
 start:
     sei                  ; no KERNAL IRQ - raster polling must not jitter
 
+    jsr music_init       ; set up SID and start the music
+
     lda #0
     sta framectr
     sta slide
@@ -72,6 +74,19 @@ p_done:
     lda #WHITE
     sta COLRAM+39
 no_pdraw:
+
+    jsr scan_m           ; 'm' toggles mute - edge detected
+    bne m_up
+    lda mheld
+    bne m_done
+    lda #1
+    sta mheld
+    jsr toggle_mute
+    jmp m_done
+m_up:
+    lda #0
+    sta mheld
+m_done:
 
     jsr scan_del         ; backspace: one slide back
     beq go_back
@@ -157,6 +172,23 @@ scan_del:                ; inst/del: column 0, row 0
     ldy #$01
     jmp scan_key
 
+scan_m:                  ; 'm': column 4, row 4
+    lda #$ef
+    ldy #$10
+    jmp scan_key
+
+; ---- flip the mute state ----
+toggle_mute:
+    lda mus_muted
+    eor #1
+    sta mus_muted
+    bne tm_off
+    jsr music_unmute     ; was muted, now unmute
+    rts
+tm_off:
+    jsr music_mute       ; was playing, now mute
+    rts
+
 call_update:
     jmp (updvec)         ; each update runs exactly one frame, ends with rts
 
@@ -191,6 +223,7 @@ slide_setup:
 !src "slide3.asm"
 !src "slide4.asm"
 !src "slide5.asm"
+!src "music.asm"
 
 ; ---- slide table: init vector, update vector, duration ----
 slide_init_lo:
@@ -218,3 +251,4 @@ durlo:     !byte 0       ; frames left on this slide (16 bit)
 durhi:     !byte 0
 paused:    !byte 0       ; 1 = slide countdown frozen
 pheld:     !byte 0       ; 'p' key edge detection state
+mheld:     !byte 0       ; 'm' key edge detection state

@@ -334,6 +334,7 @@ wf_reach:
     lda RASTER
     cmp #RAS_BOTTOM
     bne wf_reach
+    jsr music_play       ; advance the music once per frame
     rts
 
 ; ---- copy color RAM to FADEBUF, then blacken color RAM ----
