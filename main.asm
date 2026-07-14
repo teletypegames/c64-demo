@@ -51,6 +51,8 @@ start:
 ; ============================================================
 main:
     jsr call_update
+    jsr music_play       ; slide updates end at RAS_BOTTOM, so this
+                         ;   ticks the music once per frame
 
     ; 'p' toggles pause - edge detected, so holding the key
     ; does not keep flipping the state

@@ -52,7 +52,7 @@ RAS_BARTOP  = 16                 ; first raster line of the bar area (slide 3):
 BAR_STEPS   = 57                 ; 57 steps * 4 lines = up to line 244
 
 NUM_SLIDES  = 5
-SLIDE_TIME  = 300                ; 6 seconds per slide (PAL, 50 frames/s)
+SLIDE_TIME  = 400                ; 8 seconds per slide (PAL, 50 frames/s)
 S5_TIME     = 450                ; slide 5 is longer: the typewriter needs time
 FADE_STEPS  = 5                  ; fade steps (longest fadetbl chain is 4)
 FADE_SPEED  = 4                  ; frames between two fade steps
