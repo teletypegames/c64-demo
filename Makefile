@@ -1,12 +1,28 @@
+# -----------------------------------------
+# Makefile – C64 project builder (ACME + VICE)
+# -----------------------------------------
+
+PROJECT = c64-demo
+
 ASM    = acme
 EMU    = x64sc
 SRC    = main.asm
 SRCS   = $(wildcard *.asm)
 TARGET = main.prg
 
+METADATA = metadata.json
+
 UNAME_S := $(shell uname -s)
 
-.PHONY: build run clear rebuild rebuildrun deps
+# CI/CD variables
+VERSION_FILE = .version
+DROPAREA_HOST ?= vps.teletype.hu
+DROPAREA_PORT ?= 2223
+DROPAREA_TARGET_PATH ?= /home/drop
+DROPAREA_USER ?= drop
+UPDATE_SERVER ?= https://games.vps.teletype.hu
+
+all: build
 
 deps:
 ifeq ($(UNAME_S),Darwin)
@@ -27,8 +43,49 @@ run: build
 	$(EMU) $(TARGET)
 
 clear:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(PROJECT)-*.prg $(PROJECT)-*.metadata.json $(VERSION_FILE)
 
 rebuild: clear build
 
 rebuildrun: clear build run
+
+# -----------------------------------------
+# CI/CD Pipeline targets
+# -----------------------------------------
+
+ci-version:
+	@VERSION=$$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' $(METADATA) | head -n 1); \
+	if [ -z "$$VERSION" ]; then \
+		echo "ERROR: no \"version\" field in $(METADATA)!"; \
+		exit 1; \
+	fi; \
+	BRANCH=$${CI_COMMIT_BRANCH:-$${WOODPECKER_BRANCH}}; \
+	BRANCH=$$(echo "$$BRANCH" | tr '/' '-'); \
+	if [ "$$BRANCH" != "main" ] && [ "$$BRANCH" != "master" ] && [ -n "$$BRANCH" ]; then \
+		VERSION=dev-$$VERSION-$$BRANCH; \
+	fi; \
+	echo "VERSION is: $$VERSION"; \
+	echo $$VERSION > $(VERSION_FILE)
+
+ci-build: build
+	@VERSION=$$(cat $(VERSION_FILE)); \
+	echo "==> Creating versioned files for $$VERSION"; \
+	cp $(TARGET) $(PROJECT)-$$VERSION.prg; \
+	cp $(METADATA) $(PROJECT)-$$VERSION.metadata.json; \
+	ls -lh $(PROJECT)-$$VERSION.*
+
+ci-artifact:
+	@VERSION=$$(cat $(VERSION_FILE)); \
+	echo "==> Uploading artifacts for version $$VERSION"; \
+	SCP_TARGET="$(DROPAREA_USER)@$(DROPAREA_HOST):$(DROPAREA_TARGET_PATH)/"; \
+	sshpass -p "$(DROPAREA_SSH_PASSWORD)" scp -o StrictHostKeyChecking=no -P $(DROPAREA_PORT) \
+		$(PROJECT)-$$VERSION.prg \
+		$(PROJECT)-$$VERSION.metadata.json \
+		$$SCP_TARGET
+
+ci-update:
+	@VERSION=$$(cat $(VERSION_FILE)); \
+	echo "==> Triggering update for version $$VERSION"; \
+	curl "$(UPDATE_SERVER)/update?secret=$(UPDATE_SECRET)&name=$(PROJECT)&platform=c64&version=$$VERSION"
+
+.PHONY: all deps build run clear rebuild rebuildrun ci-version ci-build ci-artifact ci-update

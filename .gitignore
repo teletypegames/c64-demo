@@ -1,2 +1,4 @@
 .claude
 *.prg
+.version
+*-*.metadata.json
