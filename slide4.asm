@@ -28,7 +28,17 @@ s4i_star:
     ; sprites: same star shape on all six, floating behind the
     ; characters; enabled by the update, so they pop in only
     ; after the slide's in-transition is done
-    lda #(sprdata >> 6)
+    ;
+    ; the shape is copied to the cassette buffer: the VIC sees
+    ; the chargen ROM at $1000-$1fff instead of RAM, so sprite
+    ; data assembled there ($1540) would show as glyph garbage
+    ldx #62
+s4i_copy:
+    lda sprdata,x
+    sta SPRBUF,x
+    dex
+    bpl s4i_copy
+    lda #(SPRBUF >> 6)
     ldx #5
 s4i_ptr:
     sta SCREEN+$3f8,x
@@ -198,9 +208,8 @@ xwob:                    ; 64-entry sine, 12 +/- 12 (x wobble)
     !byte $00, $00, $00, $01, $01, $01, $02, $03
     !byte $04, $04, $05, $06, $07, $09, $0a, $0b
 
-; 24x21 four-pointed star sprite (must sit on a 64-byte boundary
-; and below $4000, the top of the VIC's bank)
-!align 63, 0
+; 24x21 four-pointed star sprite; copied to SPRBUF at init, so
+; it needs no alignment and may sit anywhere
 sprdata:
     !byte $00, $00, $00
     !byte $00, $00, $00

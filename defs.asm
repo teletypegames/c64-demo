@@ -63,6 +63,9 @@ TR_DISSOLVE = 1                  ; cells appear/vanish in random order
 TR_WIPE     = 2                  ; column sweep, left to right
 
 FADEBUF     = $c000              ; snapshot of color RAM for the fade-in
+SPRBUF      = $0340              ; sprite shape (cassette buffer): 64-aligned
+                                 ;   RAM the VIC can fetch from (the chargen
+                                 ;   ROM shadows $1000-$1fff in bank 0)
 
 ; ---- zero page pointers ----
 txtlo  = $f5             ; text pointer for the print routines (2 bytes)
