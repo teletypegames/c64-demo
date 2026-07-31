@@ -6,9 +6,8 @@ steps:
       - 'make ci-version'
 
   - name: build
-    image: debian:stable-slim
+    image: git.teletypegames.org/internal/c64-builder:latest
     commands:
-      - 'apt-get update && apt-get install -y --no-install-recommends make acme'
       - 'make ci-build'
 
   - name: artifact

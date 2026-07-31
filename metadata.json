@@ -3,6 +3,6 @@
   "title": "Teletype Games C64 Demo",
   "author": "Teletype Games",
   "desc": "A Commodore 64 slide show in 6502 assembly: five slides with per-slide transitions, the TTG logo with a gold color wash, a credits scroller, a parallax starfield with sprites, a typewriter confession slide, and SID music.",
-  "site": "https://git.teletype.hu/games/c64-demo",
+  "site": "https://git.teletypegames.org/games/c64-demo",
   "version": "1.0.0"
 }
