@@ -79,9 +79,9 @@ ci-artifact:
 			"$(UPDATE_SERVER)/build/upload?name=$(PROJECT)&version=$$VERSION" || exit 1; \
 	done
 
-ci-update:
+ci-publish:
 	@VERSION=$$(cat $(VERSION_FILE)); \
 	echo "==> Triggering update for version $$VERSION"; \
 	curl -fsS -X POST -H "X-Update-Secret: $(UPDATE_SECRET)" "$(UPDATE_SERVER)/build/publish?name=$(PROJECT)&platform=c64&version=$$VERSION"
 
-.PHONY: all deps build run clear rebuild rebuildrun ci-version ci-build ci-artifact ci-update
+.PHONY: all deps build run clear rebuild rebuildrun ci-version ci-build ci-artifact ci-publish
