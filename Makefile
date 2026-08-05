@@ -16,10 +16,6 @@ UNAME_S := $(shell uname -s)
 
 # CI/CD variables
 VERSION_FILE = .version
-DROPAREA_HOST ?= vps.teletype.hu
-DROPAREA_PORT ?= 2223
-DROPAREA_TARGET_PATH ?= /home/drop
-DROPAREA_USER ?= drop
 UPDATE_SERVER ?= https://teletypegames.org
 
 all: build
@@ -77,15 +73,15 @@ ci-build: build
 ci-artifact:
 	@VERSION=$$(cat $(VERSION_FILE)); \
 	echo "==> Uploading artifacts for version $$VERSION"; \
-	SCP_TARGET="$(DROPAREA_USER)@$(DROPAREA_HOST):$(DROPAREA_TARGET_PATH)/"; \
-	sshpass -p "$(DROPAREA_SSH_PASSWORD)" scp -o StrictHostKeyChecking=no -P $(DROPAREA_PORT) \
-		$(PROJECT)-$$VERSION.prg \
-		$(PROJECT)-$$VERSION.metadata.json \
-		$$SCP_TARGET
+	for f in $(PROJECT)-$$VERSION.prg $(PROJECT)-$$VERSION.metadata.json; do \
+		curl -fsS -H "X-Update-Secret: $(UPDATE_SECRET)" \
+			-F "file=@$$f" \
+			"$(UPDATE_SERVER)/build/upload?name=$(PROJECT)&version=$$VERSION" || exit 1; \
+	done
 
 ci-update:
 	@VERSION=$$(cat $(VERSION_FILE)); \
 	echo "==> Triggering update for version $$VERSION"; \
-	curl "$(UPDATE_SERVER)/update?secret=$(UPDATE_SECRET)&name=$(PROJECT)&platform=c64&version=$$VERSION"
+	curl -fsS -X POST -H "X-Update-Secret: $(UPDATE_SECRET)" "$(UPDATE_SERVER)/build/publish?name=$(PROJECT)&platform=c64&version=$$VERSION"
 
 .PHONY: all deps build run clear rebuild rebuildrun ci-version ci-build ci-artifact ci-update
