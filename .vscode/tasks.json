@@ -40,6 +40,20 @@
       "type": "shell",
       "command": "make rebuildrun",
       "problemMatcher": []
+    },
+    {
+      "label": "dev image",
+      "detail": "Builds the dev container image locally from .devcontainer/Dockerfile",
+      "type": "warpengine",
+      "action": "devImage",
+      "problemMatcher": []
+    },
+    {
+      "label": "play",
+      "detail": "Builds and plays the game in the host's web runtime (EmulatorJS)",
+      "type": "warpengine",
+      "action": "play",
+      "problemMatcher": []
     }
   ]
 }
